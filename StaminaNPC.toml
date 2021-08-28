@@ -1,0 +1,4 @@
+[General]
+closeInCombat = false	# Automatically closes the loot menu in combat
+closeOnEmpty = true	# Automatically closes the loot menu if the container is empty
+dispelInvis = true	# Dispels invisibility when looting a container
