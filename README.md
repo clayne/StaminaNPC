@@ -1,4 +1,4 @@
-#### This is a SSE mod [StaminaNPC](https://www.nexusmods.com/skyrimspecialedition/mods/)
+#### This is a SSE mod [StaminaNPC](https://www.nexusmods.com/skyrimspecialedition/mods/50502)
 
 
 #### Requirements
