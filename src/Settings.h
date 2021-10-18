@@ -5,6 +5,7 @@ struct Settings
 {
 	using ISetting = AutoTOML::ISetting;
 	using bSetting = AutoTOML::bSetting;
+	using fSetting = AutoTOML::fSetting;
 
 	static void load()
 	{
@@ -24,15 +25,38 @@ struct Settings
 		}
 	}
 
-	static inline bSetting melee{ "NPC"s, "Melee"s, true };
-	static inline bSetting ranged{ "NPC"s, "Ranged"s, true };
-	static inline bSetting blockbash{ "NPC"s, "Block"s, true };
-	static inline bSetting runspeed{ "NPC"s, "RunSpeed"s, true };
+	static inline bSetting meleeNPC{ "Melee_n_Bash"s, "NPC"s, true };  // deny npc attack and bash
+	static inline bSetting costMelee{ "Melee_n_Bash"s, "Damage"s, true };  // damage stamina + deny Player from attacking
+	static inline fSetting attackWeightMult{ "Melee_n_Bash"s, "WeightMult"s, 1.0f };
+	static inline fSetting attackStaminaMult{ "Melee_n_Bash"s, "StaminaMult"s, 0.01f };
+	static inline fSetting attackBase{ "Melee_n_Bash"s, "Base"s, 1.0f };
+	// Attack type mults
+	static inline fSetting attackTypeMult_normattack{ "AttackTypeMults"s, "Normattack"s, 1.0f };
+	static inline fSetting attackTypeMult_powerattack{ "AttackTypeMults"s, "Powerattack"s, 1.0f };
+	static inline fSetting attackTypeMult_bash{ "AttackTypeMults"s, "Bash"s, 1.0f };
+	static inline fSetting attackTypeMult_powerbash{ "AttackTypeMults"s, "Powerbash"s, 1.0f };
 
-	static inline bSetting meleePlayer{ "Player"s, "Melee"s, true };
-	static inline bSetting rangedPlayer{ "Player"s, "Ranged"s, true };
-	static inline bSetting blockbashPlayer{ "Player"s, "Block"s, true };
-	static inline bSetting ablerunPlayer{ "Player"s, "AbleRun"s, true };
-	static inline bSetting ablejumpPlayer{ "Player"s, "AbleJump"s, true };
+	static inline bSetting blockNPC{ "Block"s, "NPC"s, true };  // deny npc block
+	static inline bSetting blockPlayer{ "Block"s, "Player"s, true };  // deny player block
+	static inline bSetting costBlock{ "Block"s, "Damage"s, true };  // damage stamina
+	static inline fSetting blockWeightMult{ "Block"s, "WeightMult"s, 1.0f };
+	static inline fSetting blockStaminaMult{ "Block"s, "StaminaMult"s, 0.01f };
+	static inline fSetting blockBase{ "Block"s, "Base"s, 1.0f };
+
+	static inline bSetting rangedNPC{ "Bow"s, "NPC"s, true };  // deny npc bow attack
+	static inline bSetting rangedPlayer{ "Bow"s, "Player"s, true };  // deny player bow attack
+	static inline bSetting costRanged{ "Bow"s, "Damage"s, true };  // damage stamina
+	static inline fSetting bowWeightMult{ "Bow"s, "WeightMult"s, 1.0f };
+	static inline fSetting bowStaminaMult{ "Bow"s, "StaminaMult"s, 0.01f };
+	static inline fSetting bowBase{ "Bow"s, "Base"s, 1.0f };
+
+	static inline bSetting jumpPlayer{ "Jumps"s, "Player"s, true };  // deny player jump attack
+	static inline bSetting costJump{ "Jumps"s, "Damage"s, true };  // damage stamina
+	static inline fSetting jumpWeightMult{ "Jumps"s, "WeightMult"s, 1.0f };
+	static inline fSetting jumpStaminaMult{ "Jumps"s, "StaminaMult"s, 0.01f };
+	static inline fSetting jumpBase{ "Jumps"s, "Base"s, 1.0f };
+
+
+	static inline bSetting runspeedNPC{ "Speed"s, "NPC"s, true };  // decrease movement speed
 };
 

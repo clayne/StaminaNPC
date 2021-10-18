@@ -1,4 +1,65 @@
-[General]
-closeInCombat = false	# Automatically closes the loot menu in combat
-closeOnEmpty = true	# Automatically closes the loot menu if the container is empty
-dispelInvis = true	# Dispels invisibility when looting a container
+# "with low stamina" = current stamina less than calculated cost
+
+# calculated cost = w * a + b * s + c, where
+# w -- weight of appropriate part
+#   weapon for attack
+#   shield (or weapon) for bash
+#   bow for attack and bash
+#   cuirass for jump
+#   attacker's weapon + victim's shield (or weapon) for block
+# s -- current actor stamina
+# a, b, c -- configurable constants
+
+# calculated cost for attack = calculated cost * k, where
+# calculated cost -- defined above
+# k -- AttackTypeMult, each for every attack type (normal, power, bash, powerbash)
+
+
+
+[Melee_n_Bash]
+NPC         = true # Deny NPC attack and bash with low stamina
+Damage      = true # Damage stamina every melee attack and bash, also deny Player from attacking with low stamina
+WeightMult  = 0.9  # a
+StaminaMult = 0.05 # b
+Base        = 6.8  # c
+
+[AttackTypeMults]
+Normattack  = 1.0 # k for normal attack
+Powerattack = 1.5 # k for power attack
+Bash        = 0.5 # k for bash
+Powerbash   = 1.0 # k for power bash
+
+
+
+[Block]
+NPC = true         # Deny NPC block with low stamina
+Player      = true # Deny Player block with low stamina
+Damage      = true # Damage stamina every successful block
+WeightMult  = 0.2  # a
+StaminaMult = 0.05 # b
+Base        = 3.0  # c
+
+
+
+[Bow]
+# bow bash considered melee attack
+NPC         = true # Deny NPC bow shot with low stamina
+Player      = true # Deny Player bow shot with low stamina
+Damage      = true # Damage stamina every bow shot
+WeightMult  = 0.66 # a
+StaminaMult = 0.05 # b
+Base        = 6.66 # c
+
+
+
+[Jumps]
+Player      = true # Deny Player jump with low stamina
+Damage      = true # Damage Player stamina every jump
+WeightMult  = 0.57 # a
+StaminaMult = 0.05 # b
+Base        = -2.3 # c
+
+
+
+[Speed]
+NPC = true # Decrease npc movement speed with low stamina (by half)

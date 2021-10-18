@@ -5,7 +5,7 @@
 #include "Settings.h"
 #include "spdlog/sinks/basic_file_sink.h"
 
-#define DEBUG_ON
+//#define DEBUG_ON
 
 extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a_skse, SKSE::PluginInfo* a_info)
 {
@@ -53,29 +53,12 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a
 	return true;
 }
 
-bool is_strong(RE::StaticFunctionTag*, RE::Actor* a)
-{
-	return CharHandler::is_strong(a);
-}
-
-bool RegisterFuncs(RE::BSScript::IVirtualMachine* a_vm)
-{
-	a_vm->RegisterFunction("isStrong", "f314ImTired_Utility", is_strong);
-
-	return true;
-}
-
 extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_skse)
 {
 	SKSE::Init(a_skse);
 
-	auto papyrus = SKSE::GetPapyrusInterface();
-	if (!papyrus->Register(RegisterFuncs)) {
-		return false;
-	}
-
 	Settings::load();
-	Hooks::apply_hooks(std::uintptr_t(CharHandler::is_strong), std::uintptr_t(CharHandler::is_strong_shield));
+	Hooks::apply_hooks();
 
 	return true;
 }
