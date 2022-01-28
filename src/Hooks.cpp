@@ -366,7 +366,24 @@ namespace Hooks
 
 		constexpr REL::ID funcOffset(ID);
 		const char data_end[] = "\x0F\x1F\x44\x00\x00";
-		REL::safe_write(funcOffset.address() + 0xCB, data_end, 4);
+		REL::safe_write(funcOffset.address() + 0xCB, data_end, 4);  // ????? why not 5
+	}
+
+	void apply_deny_player_attack_or_bash()
+	{
+		const int ID = 38047;
+
+		// SkyrimSE.exe+63D06B
+		apply_call<ID, 0xBB>((uintptr_t)CharHandler::deny_player_attack_isstrong);
+
+		constexpr REL::ID funcOffset(ID);
+		const char data[] = "\x84\xc0\x75\x38\xeb\x1d";
+		REL::safe_write(funcOffset.address() + 0xC0, data, 6);
+	}
+
+	void apply_cost_attack_or_bash() {
+		// SkyrimSE.exe+627A9E
+		apply_call<37650, 0x16E>((uintptr_t)CharHandler::get_attack_cost);
 	}
 
 	void apply_hooks()
@@ -374,17 +391,24 @@ namespace Hooks
 		SKSE::AllocTrampoline(1 << 10);
 
 		if (*Settings::meleeNPC) {
-			// Attack + bash
-			// NPC, deny
+			// NPC, deny melee
 			apply_another_get_chance(std::uintptr_t(CharHandler::is_strong_attack));
 			apply_get_CombatSpecialAttackChance(std::uintptr_t(CharHandler::is_strong_attack));
-			// bash
+		}
+		if (*Settings::bashNPC) {
+			// NPC, deny bash
 			apply_get_CombatBashChance(std::uintptr_t(CharHandler::is_strong_bash));
 			apply_get_OffensiveBashChance(std::uintptr_t(CharHandler::is_strong_bash));
 		}
-		// Both, cost + Player, deny
-		if (*Settings::costMelee) {
-			apply_func<25863>(std::uintptr_t(CharHandler::get_attack_cost));  // SkyrimSE.exe+3BEC90
+
+		if (*Settings::meleePlayer || *Settings::bashPlayer) {
+			// deny Player. Melee and (or) bash
+			apply_deny_player_attack_or_bash();
+		}
+
+		if (*Settings::meleeCostNPC || *Settings::meleeCostPlayer || *Settings::bashCostNPC || *Settings::bashCostPlayer) {
+			// cost. NPC and (or) Player. Melee and (or) bash
+			apply_cost_attack_or_bash();
 		}
 		
 		if (*Settings::rangedNPC) {

@@ -25,16 +25,25 @@ struct Settings
 		}
 	}
 
-	static inline bSetting meleeNPC{ "Melee_n_Bash"s, "NPC"s, true };  // deny npc attack and bash
-	static inline bSetting costMelee{ "Melee_n_Bash"s, "Damage"s, true };  // damage stamina + deny Player from attacking
-	static inline fSetting attackWeightMult{ "Melee_n_Bash"s, "WeightMult"s, 1.0f };
-	static inline fSetting attackStaminaMult{ "Melee_n_Bash"s, "StaminaMult"s, 0.01f };
-	static inline fSetting attackBase{ "Melee_n_Bash"s, "Base"s, 1.0f };
-	// Attack type mults
-	static inline fSetting attackTypeMult_normattack{ "AttackTypeMults"s, "Normattack"s, 1.0f };
-	static inline fSetting attackTypeMult_powerattack{ "AttackTypeMults"s, "Powerattack"s, 1.0f };
-	static inline fSetting attackTypeMult_bash{ "AttackTypeMults"s, "Bash"s, 1.0f };
-	static inline fSetting attackTypeMult_powerbash{ "AttackTypeMults"s, "Powerbash"s, 1.0f };
+	static inline bSetting meleeNPC{ "Melee"s, "DenyNPC"s, true };           // Deny NPC attacks with low stamina
+	static inline bSetting meleePlayer{ "Melee"s, "DenyPlayer"s, true };     // Deny Player attacks with low stamina
+	static inline bSetting meleeCostPlayer{ "Melee"s, "DamageNPC"s, true };  // Damage NPC stamina every melee attack
+	static inline bSetting meleeCostNPC{ "Melee"s, "DamagePlayer"s, true };  // Damage Player stamina every melee attack
+	static inline fSetting meleeWeightMult{ "Melee"s, "WeightMult"s, 0.9f };
+	static inline fSetting meleeStaminaMult{ "Melee"s, "StaminaMult"s, 0.05f };
+	static inline fSetting meleeBase{ "Melee"s, "Base"s, 6.8f };
+
+	static inline bSetting bashNPC{ "Bash"s, "DenyNPC"s, true };           // Deny NPC bash with low stamina
+	static inline bSetting bashPlayer{ "Bash"s, "DenyPlayer"s, true };     // Deny Player bash with low stamina
+	static inline bSetting bashCostPlayer{ "Bash"s, "DamageNPC"s, true };  // Damage NPC stamina every bash
+	static inline bSetting bashCostNPC{ "Bash"s, "DamagePlayer"s, true };  // Damage Player stamina every bash
+	static inline fSetting bashWeightMult{ "Bash"s, "WeightMult"s, 0.45f };
+	static inline fSetting bashStaminaMult{ "Bash"s, "StaminaMult"s, 0.025f };
+	static inline fSetting bashBase{ "Bash"s, "Base"s, 3.4f };
+
+	static inline fSetting attackTypeMult_powerattack{ "AttackTypeMults"s, "PowerAttack"s, 1.5f };
+	static inline fSetting attackTypeMult_powerbash{ "AttackTypeMults"s, "PowerBash"s, 2.0f };
+
 
 	static inline bSetting blockNPC{ "Block"s, "NPC"s, true };  // deny npc block
 	static inline bSetting blockPlayer{ "Block"s, "Player"s, true };  // deny player block

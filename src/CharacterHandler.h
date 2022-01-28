@@ -10,6 +10,8 @@ namespace CharHandler
 	void TESObjectWEAP__Fire_140235240_hooked(RE::TESObjectWEAP* weap, RE::TESObjectREFR* source, RE::TESAmmo* overwriteAmmo, RE::EnchantmentItem* ammoEnchantment, RE::AlchemyItem* poison);
 	bool is_strong_bow(RE::Actor* a, RE::TESObjectWEAP* bow);
 	bool is_strong_block(RE::Actor* a);
+
+	bool deny_player_attack_isstrong(char* _a, RE::BGSAttackData* attack);
 }
 
 namespace PlayerHandler
