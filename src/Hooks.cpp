@@ -302,7 +302,7 @@ namespace Hooks
 		add_trampoline<BRANCH_TYPE, ID, 0x4>(&xbyakCode);
 	}
 
-	void apply_bow()
+	void apply_deny_bow_Player()
 	{
 		// SkyrimSE.exe+74B769(+0x5F9) -- SkyrimSE.exe+74B779(+0x609)
 		const int ID = 42928, BRANCH_TYPE = 6;
@@ -319,7 +319,7 @@ namespace Hooks
 				mov(rax, retaddr);
 				jmp(rax);
 			}
-		} xbyakCode{ std::uintptr_t(PlayerHandler::get_bow_power_hooked), retAddr };
+		} xbyakCode{ std::uintptr_t(PlayerHandler::deny_bow_Player), retAddr };
 		add_trampoline<BRANCH_TYPE, ID, 0x5F9>(&xbyakCode);
 	}
 
@@ -381,9 +381,37 @@ namespace Hooks
 		REL::safe_write(funcOffset.address() + 0xC0, data, 6);
 	}
 
-	void apply_cost_attack_or_bash() {
-		// SkyrimSE.exe+627A9E
-		apply_call<37650, 0x16E>((uintptr_t)CharHandler::get_attack_cost);
+	void aplly_cost_jump_Player()
+	{
+		// SkyrimSE.exe+5D2115(+0x195) -- SkyrimSE.exe+5D211C(+0x19C)
+		const int ID = 36271, BRANCH_TYPE = 6;
+		constexpr REL::ID funcOffset = REL::ID(ID);
+		auto retAddr = std::uintptr_t(funcOffset.address() + 0x19C);
+
+		struct Code : Xbyak::CodeGenerator
+		{
+			Code(uintptr_t func, uintptr_t retaddr)
+			{
+				sub(rsp, 0x20);
+				movss(ptr[rsp + 0x18], xmm0);
+				movss(ptr[rsp + 0x10], xmm6);
+
+				mov(rcx, rdi);
+				mov(rax, func);
+				call(rax);
+
+				movss(xmm0, ptr[rsp + 0x18]);
+				movss(xmm6, ptr[rsp + 0x10]);
+				add(rsp, 0x20);
+
+				movaps(xmm7, xmm0);  // restore
+				mulss(xmm7, xmm6);
+
+				mov(rax, retaddr);
+				jmp(rax);
+			}
+		} xbyakCode{ std::uintptr_t(PlayerHandler::cost_jump_Player), retAddr };
+		add_trampoline<BRANCH_TYPE, ID, 0x195>(&xbyakCode);
 	}
 
 	void apply_hooks()
@@ -408,19 +436,19 @@ namespace Hooks
 
 		if (*Settings::meleeCostNPC || *Settings::meleeCostPlayer || *Settings::bashCostNPC || *Settings::bashCostPlayer) {
 			// cost. NPC and (or) Player. Melee and (or) bash
-			apply_cost_attack_or_bash();
+			apply_call<37650, 0x16E>((uintptr_t)CharHandler::get_attack_cost);  // SkyrimSE.exe+627A9E
 		}
 		
 		if (*Settings::rangedNPC) {
 			// NPC, deny
-			apply_get_CombatRangedAttackChance(std::uintptr_t(CharHandler::is_strong_bow));
+			apply_get_CombatRangedAttackChance(std::uintptr_t(CharHandler::is_strong_bow_NPC));
 		}
 		if (*Settings::rangedPlayer) {
 			// Player, deny
-			apply_bow();
+			apply_deny_bow_Player();
 		}
-		if (*Settings::rangedPlayer && *Settings::rangedNPC && *Settings::costRanged) {
-			// Both, cost
+		if (*Settings::rangedCostNPC || *Settings::rangedCostPlayer) {
+			// cost, NPC and (or) Player
 			apply_call<41778, 0x133>(std::uintptr_t(CharHandler::TESObjectWEAP__Fire_140235240_hooked));  // SkyrimSE.exe+7221E3
 		}
 
@@ -433,22 +461,23 @@ namespace Hooks
 			// Player, deny
 			apply_PlayerControls__sub_140705530();
 		}
-		if (*Settings::blockNPC && *Settings::blockPlayer && *Settings::costBlock) {
+		if (*Settings::blockCostNPC || *Settings::blockCostPlayer) {
 			// Both, cost
-			apply_func<25864>(std::uintptr_t(CharHandler::get_block_cost));  // SkyrimSE.exe+3BED80
+			apply_call<37633, 0x8D4>(std::uintptr_t(CharHandler::get_block_cost));  // SkyrimSE.exe+626CD4
 		}
 
 		if (*Settings::runspeedNPC) {
 			// NPC, get slower
-			apply_call<49311, 0x2E1>(std::uintptr_t(SpeedHandler::hooked_ActorState__sub_1410C3D40));  // SkyrimSE.exe+3BED80
+			apply_call<49311, 0x2E1>(std::uintptr_t(SpeedHandler::hooked_ActorState__sub_1410C3D40));  // SkyrimSE.exe+83CB51
 		}
 
 		if (*Settings::jumpPlayer) {
-			// Player, cost+deny
-			if (*Settings::costJump)
-				apply_Actor__jump(std::uintptr_t(PlayerHandler::Actor__Jump_1405D1F80_hooked));
-			else
-				apply_Actor__jump(std::uintptr_t(PlayerHandler::Actor__Jump_1405D1F80_hooked_onlydeny));
+			// Player, deny
+			apply_Actor__jump(std::uintptr_t(PlayerHandler::deny_jump_Player));
+		}
+		if (*Settings::jumpCost) {
+			// Player, cost
+			aplly_cost_jump_Player();
 		}
 	}
 }

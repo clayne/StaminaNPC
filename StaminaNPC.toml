@@ -1,4 +1,4 @@
-# "with low stamina" = current stamina less than calculated cost
+# "with low stamina" = current stamina less (or equal) than calculated cost
 
 # calculated cost = w * a + b * s + c, where
 # w -- weight of appropriate part
@@ -16,23 +16,34 @@
 
 
 
-[Melee_n_Bash]
-NPC         = true # Deny NPC attack and bash with low stamina
-Damage      = true # Damage stamina every melee attack and bash, also deny Player from attacking with low stamina
-WeightMult  = 0.9  # a
-StaminaMult = 0.05 # b
-Base        = 6.8  # c
+[Melee]
+DenyNPC      = true # Deny NPC attacks with low stamina
+DenyPlayer   = true # Deny Player attacks with low stamina
+DamageNPC    = true # Damage NPC stamina every melee attack
+DamagePlayer = true # Damage Player stamina every melee attack
+WeightMult   = 0.9  # a
+StaminaMult  = 0.05 # b
+Base         = 6.8  # c
+
+
+[Bash]
+DenyNPC      = true  # Deny NPC bash with low stamina
+DenyPlayer   = true  # Deny Player bash with low stamina
+DamageNPC    = true  # Damage NPC stamina every bash
+DamagePlayer = true  # Damage Player stamina every bash
+WeightMult   = 0.45  # a
+StaminaMult  = 0.025 # b
+Base         = 3.4   # c
+
 
 [AttackTypeMults]
-Normattack  = 1.0 # k for normal attack
-Powerattack = 1.5 # k for power attack
-Bash        = 0.5 # k for bash
-Powerbash   = 1.0 # k for power bash
+PowerAttack = 1.5 # k for power attack
+PowerBash   = 2.0 # k for power bash
 
 
 
 [Block]
-NPC = true         # Deny NPC block with low stamina
+NPC         = true # Deny NPC block with low stamina
 Player      = true # Deny Player block with low stamina
 Damage      = true # Damage stamina every successful block
 WeightMult  = 0.2  # a
