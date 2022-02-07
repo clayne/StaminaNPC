@@ -414,6 +414,40 @@ namespace Hooks
 		add_trampoline<BRANCH_TYPE, ID, 0x195>(&xbyakCode);
 	}
 
+	void apply_meleeBash_cost()
+	{
+		apply_call<37650, 0x16E>((uintptr_t)CharHandler::get_attack_cost);  // SkyrimSE.exe+627A9E
+
+		// SkyrimSE.exe+627A59
+		const int ID = 37650;
+		constexpr REL::ID funcOffset = REL::ID(ID);
+		auto retAddr = std::uintptr_t(funcOffset.address() + 0x132);
+		auto retaddr_nulldata = std::uintptr_t(funcOffset.address() + 0x206);
+
+		struct Code : Xbyak::CodeGenerator
+		{
+			Code(uintptr_t func_nulldata, uintptr_t retaddr, uintptr_t retaddr_nulldata)
+			{
+				Xbyak::Label nulldata;
+
+				cmp(qword[r14], r12);
+				je(nulldata);
+				mov(rax, retaddr);
+				jmp(rax);
+
+				L(nulldata);
+				sub(rsp, 0x20);
+				mov(rcx, rbx);
+				mov(rax, func_nulldata);
+				call(rax);
+				add(rsp, 0x20);
+				mov(rax, retaddr_nulldata);
+				jmp(rax);
+			}
+		} xbyakCode{ std::uintptr_t(CharHandler::damage_attack_cost_nulldata), retAddr, retaddr_nulldata };
+		add_trampoline<6, ID, 0x129>(&xbyakCode);
+	}
+
 	void apply_hooks()
 	{
 		SKSE::AllocTrampoline(1 << 10);
@@ -436,7 +470,7 @@ namespace Hooks
 
 		if (*Settings::meleeCostNPC || *Settings::meleeCostPlayer || *Settings::bashCostNPC || *Settings::bashCostPlayer) {
 			// cost. NPC and (or) Player. Melee and (or) bash
-			apply_call<37650, 0x16E>((uintptr_t)CharHandler::get_attack_cost);  // SkyrimSE.exe+627A9E
+			apply_meleeBash_cost();
 		}
 		
 		if (*Settings::rangedNPC) {
@@ -478,6 +512,15 @@ namespace Hooks
 		if (*Settings::jumpCost) {
 			// Player, cost
 			aplly_cost_jump_Player();
+		}
+
+		if (*Settings::RegenPlayer || *Settings::RegenNPC) {
+			// Both, regen
+			apply_call<37510, 0x176>(std::uintptr_t(CharHandler::Custom_regen_140620806));  // SkyrimSE.exe+620806
+		}
+		if (*Settings::rangedKeepDamage) {
+			// Both, keep cost
+			apply_call<37510, 0x1B>(std::uintptr_t(CharHandler::ranged_damage_while_keep));  // SkyrimSE.exe+6206AB
 		}
 	}
 }

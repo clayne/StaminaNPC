@@ -13,6 +13,9 @@ namespace CharHandler
 	bool deny_player_attack_isstrong(char* _a, RE::BGSAttackData* attack);
 	bool is_strong_bow(RE::Actor* a, RE::TESObjectWEAP* bow);
 	bool is_strong_bow_NPC(RE::Actor* a, RE::TESObjectWEAP* bow);
+	void Custom_regen_140620806(RE::Actor* a, int, float val);
+	bool ranged_damage_while_keep(RE::Actor* a, int ind, float passed_time);
+	void damage_attack_cost_nulldata(RE::Actor* a);
 }
 
 namespace PlayerHandler

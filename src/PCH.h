@@ -5,6 +5,8 @@
 #include "SKSE/SKSE.h"
 #include "AutoTOML.hpp"
 
+//#define DEBUG_ON
+
 #ifdef DEBUG_ON
 #include <spdlog/sinks/basic_file_sink.h>
 #else

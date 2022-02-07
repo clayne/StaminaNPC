@@ -29,13 +29,29 @@ namespace WeaponsHandler
 		return weap;
 	}
 
+	static bool is_human(RE::Actor* a)
+	{
+		auto race = a->GetRace();
+		if (!race)
+			return false;
+
+		auto flag = race->validEquipTypes.underlying();
+		auto mask = static_cast<uint32_t>(RE::TESRace::EquipmentFlag::kOneHandSword) |
+		            static_cast<uint32_t>(RE::TESRace::EquipmentFlag::kTwoHandSword);
+		return (flag & mask) > 0;
+	}
+
 	static float get_weapon_weight(RE::Actor* a)
 	{
 		auto weap = get_weapon(a, false);
 		if (weap)
 			return weap->GetWeight();
-		else
-			return std::max(0.0f, 1.0f + (a->GetActorValue(RE::ActorValue::kMass) - 1.0f) * MASS_MULT);
+		
+		auto ans = a->GetActorValue(RE::ActorValue::kMass);
+		if (!is_human(a))
+			ans = ans * MASS_MULT;
+
+		return ans;
 	}
 
 	static RE::TESObjectARMO* get_shield(RE::Actor* a)
@@ -53,14 +69,14 @@ namespace WeaponsHandler
 	static float get_shield_weight(RE::Actor* a)
 	{
 		auto shield = get_shield(a);
-		if (shield)
+		if (shield) {
 			return shield->GetWeight();
-
-		auto weap = get_weapon(a, false);
-		if (weap)
-			return weap->GetWeight();
-		else
-			return std::max(0.0f, (a->GetActorValue(RE::ActorValue::kMass) - 1.0f) * MASS_MULT);
+		} else {
+			auto weap = get_weapon(a, false);
+			if (weap)
+				return weap->GetWeight();
+		}
+		return 1.0f;
 	}
 
 	static float get_curiass_weight(RE::Actor* a)
@@ -68,21 +84,13 @@ namespace WeaponsHandler
 		auto armo = a->GetWornArmor(RE::BGSBipedObjectForm::BipedObjectSlot::kBody);
 		if (armo)
 			return armo->GetWeight();
-		else
-			return std::max(0.0f, (a->GetActorValue(RE::ActorValue::kMass) - 1.0f) * MASS_MULT);
-	}
 
-	//static std::pair<RE::TESObjectWEAP*, bool> check_bow(RE::Character* player)
-	//{
-	//	auto left_weap = get_weapon(player, true);
-	//	if (!left_weap)
-	//		return { nullptr, false };
-	//
-	//	if (left_weap->GetWeaponType() == RE::WEAPON_TYPE::kBow)
-	//		return { left_weap, true };
-	//	else
-	//		return { left_weap, false };
-	//}
+		auto ans = a->GetActorValue(RE::ActorValue::kMass);
+		if (!is_human(a))
+			ans = ans * MASS_MULT;
+
+		return ans;
+	}
 }
 
 namespace CharHandler
@@ -127,6 +135,54 @@ namespace CharHandler
 		return func(_a, attack);
 	}
 
+	static float lerp(double x, double Ax, double Ay, double Bx, double By)
+	{
+		if (abs(Bx - Ax) < 0.0000001)
+			return static_cast<float>(Ay);
+		return static_cast<float>((Ay * (Bx - x) + By * (x - Ax)) / (Bx - Ax));
+	}
+
+	static float get_skill_mult(float skill)
+	{
+		return static_cast<float>(skill / 100.0 * *Settings::SkillMult + *Settings::SkillBase);
+	}
+
+	static RE::TESObjectWEAP* get_weapon(RE::Actor* attacker)
+	{
+		auto __weap = attacker->GetAttackingWeapon();
+		if (!__weap)
+			return nullptr;
+
+		auto _weap = __weap->GetObject();
+		if (!_weap || !_weap->IsWeapon())
+			return nullptr;
+
+		return _weap->As<RE::TESObjectWEAP>();
+	}
+
+	static float get_skill_mult(RE::Actor* a, bool isBash)
+	{
+		auto weap = get_weapon(a);
+		if (!weap)
+			return 1.0f;
+
+		RE::ActorValue skill;
+		if (isBash) {
+			if (weap->GetWeaponType() == RE::WEAPON_TYPE::kBow)
+				skill = RE::ActorValue::kTwoHanded;
+			else
+				skill = RE::ActorValue::kBlock;
+		} else {
+			if (weap->IsTwoHandedAxe() || weap->IsTwoHandedSword()) {
+				skill = RE::ActorValue::kTwoHanded;
+			} else {
+				skill = RE::ActorValue::kOneHanded;
+			}
+		}
+
+		return get_skill_mult(a->GetActorValue(skill));
+	}
+
 	static float get_attack_cost_newversion(RE::Actor* a, bool isPower, bool isBash)
 	{
 		float cost;
@@ -142,6 +198,8 @@ namespace CharHandler
 		if (isPower)
 			cost *= static_cast<float>(isBash ? *Settings::attackTypeMult_powerbash : *Settings::attackTypeMult_powerattack);
 
+		cost *= get_skill_mult(a, isBash);
+
 		return cost;
 	}
 
@@ -150,7 +208,7 @@ namespace CharHandler
 		if (!weap)
 			weap = get_UnarmedWeap();
 
-		ApplyPerkEntryPoint_14032ECE0(27, a, weap, k);
+		ApplyPerkEntryPoint_14032ECE0(RE::BGSPerkEntry::EntryPoint::kModPowerAttackStamina, a, weap, k);
 	}
 
 	static float get_attack_cost_newversion(RE::Actor* a, RE::BGSAttackData* attack)
@@ -166,6 +224,13 @@ namespace CharHandler
 		// 0.01 for sphere (norm)
 		// 3.0  for one werewolf attack (ok then)
 		return cost * attack->data.staminaMult;
+	}
+
+	static float get_attack_cost_newversion_nulldata(RE::Actor* a)
+	{
+		float cost = get_attack_cost_newversion(a, false, false);
+		ApplyPerkEntryPoint(a, &cost);
+		return cost;
 	}
 
 	static bool deny_player_attack_isstrong_origin(char* _a, RE::BGSAttackData* attack)
@@ -200,31 +265,50 @@ namespace CharHandler
 		bool isBash = attack->data.flags.underlying() & 0x2;
 
 		auto a = reinterpret_cast<RE::Actor*>(_a - 0xB0);
-		bool isPlayer = a->IsPlayer();
+		bool isPlayer = a->IsPlayerRef();
 		bool new_version = false;
 
-		new_version = isBash && isPlayer && *Settings::bashCostPlayer;
-		new_version = !isBash && isPlayer && *Settings::meleeCostPlayer;
-		new_version = isBash && !isPlayer && *Settings::bashCostNPC;
-		new_version = !isBash && !isPlayer && *Settings::meleeCostNPC;
+		new_version = new_version || isBash && isPlayer && *Settings::bashCostPlayer;
+		new_version = new_version || !isBash && isPlayer && *Settings::meleeCostPlayer;
+		new_version = new_version || isBash && !isPlayer && *Settings::bashCostNPC;
+		new_version = new_version || !isBash && !isPlayer && *Settings::meleeCostNPC;
 
 		return new_version ? get_attack_cost_newversion(a, attack) :
                              ActorValueOwner__get_attack_cost_1403BEC90(_a, attack);
 	}
 
-	float get_block_cost(RE::Actor* target, RE::Actor* aggressor)
+	// fires every attask, but attackdata = 0. Should run ApplyPerkEntryPoint_14032ECE0
+	void damage_attack_cost_nulldata(RE::Actor* a)
 	{
-		float target_weigh = WeaponsHandler::get_shield_weight(target);
-		float aggressor_weigh = WeaponsHandler::get_weapon_weight(aggressor);
-		float stamina = target->GetActorValue(RE::ActorValue::kStamina);
-		return WeaponCosts::get_cost(target_weigh + aggressor_weigh, stamina, *Settings::blockWeightMult, *Settings::blockBase, *Settings::blockStaminaMult);
+		bool isPlayer = a->IsPlayerRef();
+		bool new_version = false;
+
+		new_version = new_version || isPlayer && *Settings::meleeCostPlayer;
+		new_version = new_version || !isPlayer && *Settings::meleeCostNPC;
+
+		if (new_version) {
+			float cost = get_attack_cost_newversion_nulldata(a);
+			Utils::damageav(a, RE::ACTOR_VALUE_MODIFIERS::kDamage, RE::ActorValue::kStamina, -cost);
+		}
 	}
 
-	float get_block_cost_Player(RE::Actor* target)
+	float get_block_cost(RE::Actor* target, RE::Actor* aggressor)
+	{
+		float target_weight = WeaponsHandler::get_shield_weight(target);
+		float aggressor_weight = WeaponsHandler::get_weapon_weight(aggressor);
+		float stamina = target->GetActorValue(RE::ActorValue::kStamina);
+		float ans = WeaponCosts::get_cost(target_weight + aggressor_weight, stamina, *Settings::blockWeightMult, *Settings::blockBase, *Settings::blockStaminaMult);
+		ans *= get_skill_mult(target->GetActorValue(RE::ActorValue::kBlock));
+		return ans;
+	}
+
+	static float get_block_cost_Player(RE::Actor* target)
 	{
 		float target_weigh = WeaponsHandler::get_shield_weight(target);
 		float stamina = target->GetActorValue(RE::ActorValue::kStamina);
-		return WeaponCosts::get_cost(target_weigh, stamina, *Settings::blockWeightMult, *Settings::blockBase, *Settings::blockStaminaMult);
+		float ans = WeaponCosts::get_cost(target_weigh, stamina, *Settings::blockWeightMult, *Settings::blockBase, *Settings::blockStaminaMult);
+		ans *= get_skill_mult(target->GetActorValue(RE::ActorValue::kBlock));
+		return ans;
 	}
 
 	static float get_block_cost_1403BED80(RE::HitData* data)
@@ -239,13 +323,13 @@ namespace CharHandler
 		auto aggressor = data->aggressor.get().get();
 		auto target = data->target.get().get();
 
-		bool isPlayer = aggressor->IsPlayer();
+		bool isPlayer = aggressor->IsPlayerRef();
 		bool new_version = isPlayer && *Settings::blockCostPlayer || !isPlayer && *Settings::blockCostNPC;
 
 		return new_version ? get_block_cost(target, aggressor) : get_block_cost_1403BED80(data);
 	}
 
-	float get_block_cost(RE::Actor* target)
+	static float get_block_cost(RE::Actor* target)
 	{
 		auto aggressor = target->currentCombatTarget.get().get();
 		if (!aggressor)
@@ -271,7 +355,8 @@ namespace CharHandler
 	static float get_bow_cost(RE::Actor* a, RE::TESObjectWEAP* bow)
 	{
 		return WeaponCosts::get_cost(bow->GetWeight(), a->GetBaseActorValue(RE::ActorValue::kStamina),
-			*Settings::rangedWeightMult, *Settings::rangedBase, *Settings::rangedStaminaMult);
+				   *Settings::rangedWeightMult, *Settings::rangedBase, *Settings::rangedStaminaMult) *
+		       get_skill_mult(a->GetActorValue(RE::ActorValue::kArchery));
 	}
 
 	bool is_strong_bow_NPC(RE::Actor* a, RE::TESObjectWEAP* bow)
@@ -298,9 +383,129 @@ namespace CharHandler
 		if (!a || !weap || weap->weaponData.animationType != RE::WEAPON_TYPE::kBow)
 			return;
 
-		bool isPlayer = a->IsPlayer();
+		bool isPlayer = a->IsPlayerRef();
 		if (isPlayer && *Settings::rangedCostPlayer || !isPlayer && *Settings::rangedCostNPC)
 			Utils::damageav(a, RE::ACTOR_VALUE_MODIFIERS::kDamage, RE::ActorValue::kStamina, -get_bow_cost(a, weap));
+	}
+
+	static void Actor__RestoreActorValue_140620900(RE::Actor* a, int ind, float val) {
+		using func_t = decltype(&Actor__RestoreActorValue_140620900);
+		REL::Relocation<func_t> func{ REL::ID(37513) };
+		return func(a, ind, val);
+	}
+
+	static float __fastcall Actor__GetTotalCarryWeight_1405E1860(RE::Actor* a)
+	{
+		using func_t = decltype(&Actor__GetTotalCarryWeight_1405E1860);
+		REL::Relocation<func_t> func{ REL::ID(36456) };
+		return func(a);
+	}
+
+	static float get_weight_pers(RE::Actor* a)
+	{
+		float denum = Actor__GetTotalCarryWeight_1405E1860(a);
+		if (denum < 0.0001)
+			return 1.0f;
+		return a->GetActorValue(RE::ActorValue::kInventoryWeight) / denum;
+	}
+
+	static float get_pers(RE::Actor* a, RE::ActorValue av)
+	{
+		float all = a->GetBaseActorValue(av);
+		if (all < 0.0001)
+			return 1.0f;
+
+		float cur = a->GetActorValue(av);
+		if (cur < 0.0f)
+			return 0.0f;
+
+		return cur / all;
+	}
+
+	static float lerp_HP(float x)
+	{
+		if (x <= *Settings::RegenHP_Bx)
+			return lerp(x, 0.0f, *Settings::RegenHP_Ay, *Settings::RegenHP_Bx, *Settings::RegenHP_By);
+
+		if (x <= *Settings::RegenHP_Cx)
+			return lerp(x, *Settings::RegenHP_Bx, *Settings::RegenHP_By, *Settings::RegenHP_Cx, *Settings::RegenHP_Cy);
+		
+		return lerp(x, *Settings::RegenHP_Cx, *Settings::RegenHP_Cy, 1.0f, *Settings::RegenHP_Dy);
+	}
+
+	static float lerp_SP(float x)
+	{
+		if (x <= *Settings::RegenSP_Bx)
+			return lerp(x, 0.0f, *Settings::RegenSP_Ay, *Settings::RegenSP_Bx, *Settings::RegenSP_By);
+
+		if (x <= *Settings::RegenSP_Cx)
+			return lerp(x, *Settings::RegenSP_Bx, *Settings::RegenSP_By, *Settings::RegenSP_Cx, *Settings::RegenSP_Cy);
+
+		return lerp(x, *Settings::RegenSP_Cx, *Settings::RegenSP_Cy, 1.0f, *Settings::RegenSP_Dy);
+	}
+
+	static float calculate_regen_mult(RE::Actor* a)
+	{
+		bool isPlayer = a->IsPlayerRef();
+		if ((!isPlayer || !*Settings::RegenPlayer) && (isPlayer || !*Settings::RegenNPC))
+			return 1.0f;
+
+		float ans;
+		if (isPlayer || *Settings::RegenNPCState) {
+			if (!a->actorState1.sprinting) {
+				if (a->actorState1.running) {
+					ans = static_cast<float>(*Settings::RegenRun);
+				} else if (a->actorState1.walking) {
+					ans = static_cast<float>(*Settings::RegenWalk);
+				} else {
+					ans = static_cast<float>(*Settings::RegenStay);
+				}
+			} else {
+				return 0.0f;
+			}
+		} else {
+			ans = 1.0f;
+		}
+
+		float mul = static_cast<float>(*Settings::RegenWeightMult * a->equippedWeight + *Settings::RegenCarryMult * get_weight_pers(a) + *Settings::RegenCarryBase);
+		if (mul < 0.0f)
+			return 0.0f;
+		ans *= mul;
+
+		mul = lerp_HP(get_pers(a, RE::ActorValue::kHealth));
+		if (mul < 0.0f)
+			return 0.0f;
+		ans *= mul;
+		
+		mul = lerp_SP(get_pers(a, RE::ActorValue::kStamina));
+		if (mul < 0.0f)
+			return 0.0f;
+		ans *= mul;
+
+		return ans;
+	}
+
+	static bool Character__update_RegenDelay__140620CC0(RE::Actor* a, int ind, float passed_time)
+	{
+		using func_t = decltype(&Character__update_RegenDelay__140620CC0);
+		REL::Relocation<func_t> func{ REL::ID(37516) };
+		return func(a, ind, passed_time);
+	}
+
+	bool ranged_damage_while_keep(RE::Actor* a, int ind, float passed_time) {
+		if (a->actorState1.meleeAttackState == RE::ATTACK_STATE_ENUM::kBowDrawn && *Settings::rangedKeepDamage) {
+			Utils::damageav(a, RE::ACTOR_VALUE_MODIFIERS::kDamage, RE::ActorValue::kStamina,
+				-passed_time * static_cast<float>(*Settings::rangedKeepDamageRate) * get_skill_mult(a->GetActorValue(RE::ActorValue::kArchery)));
+		}
+
+		return Character__update_RegenDelay__140620CC0(a, ind, passed_time);
+	}
+
+	void Custom_regen_140620806(RE::Actor* a, int, float val)
+	{
+		float mul = calculate_regen_mult(a);
+		if (mul > 0.0f)
+			Actor__RestoreActorValue_140620900(a, static_cast<int>(RE::ActorValue::kStamina), val * mul);
 	}
 }
 

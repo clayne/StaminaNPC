@@ -3,9 +3,6 @@
 #include "Hooks.h"
 #include "CharacterHandler.h"
 #include "Settings.h"
-#include "spdlog/sinks/basic_file_sink.h"
-
-//#define DEBUG_ON
 
 extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a_skse, SKSE::PluginInfo* a_info)
 {
