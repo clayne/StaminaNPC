@@ -1,129 +1,13 @@
 #include "Hooks.h"
 #include "Settings.h"
 #include "CharacterHandler.h"
+#include <UselessFenixUtils.h>
 
 namespace Hooks
 {
-	template <size_t BRANCH_TYPE, uint64_t ID, size_t offset = 0, bool call = false>
-	void add_trampoline(Xbyak::CodeGenerator* xbyakCode)
-	{
-		constexpr REL::ID funcOffset = REL::ID(ID);
-		auto funcAddr = funcOffset.address();
-		auto size = xbyakCode->getSize();
-		auto& trampoline = SKSE::GetTrampoline();
-		auto result = trampoline.allocate(size);
-		std::memcpy(result, xbyakCode->getCode(), size);
-		if constexpr (!call)
-			trampoline.write_branch<BRANCH_TYPE>(funcAddr + offset, (std::uintptr_t)result);
-		else
-			trampoline.write_call<BRANCH_TYPE>(funcAddr + offset, (std::uintptr_t)result);
-	}
-
-	template <int ID, int OFFSET>
-	void apply_call(std::uintptr_t func)
-	{
-		struct Code : Xbyak::CodeGenerator
-		{
-			Code(uintptr_t jump_addr)
-			{
-				mov(rax, jump_addr);
-				jmp(rax);
-			}
-		} xbyakCode{ func };
-		add_trampoline<5, ID, OFFSET, true>(&xbyakCode);
-	}
-
-	template <int ID>
-	void apply_func(std::uintptr_t func)
-	{
-		struct Code : Xbyak::CodeGenerator
-		{
-			Code(uintptr_t jump_addr)
-			{
-				mov(rax, jump_addr);
-				jmp(rax);
-			}
-		} xbyakCode{ func };
-		add_trampoline<6, ID>(&xbyakCode);
-	}
-
-	void apply_another_get_chance(std::uintptr_t is_strong)
-	{
-		const int ID = 49747, BRANCH_TYPE = 5;
-		constexpr REL::ID funcOffset = REL::ID(ID);
-		auto funcAddr = funcOffset.address();
-
-		struct Code : Xbyak::CodeGenerator
-		{
-			Code(uintptr_t is_strong_addr, uintptr_t ret_addr)
-			{
-				Xbyak::Label still_strong;
-
-				push(rcx);
-				push(rdx);
-				sub(rsp, 40);
-				mov(rax, is_strong_addr);
-				call(rax);
-				add(rsp, 40);
-				pop(rdx);
-				pop(rcx);
-
-				test(al, al);
-				jnz(still_strong);
-				xorps(xmm0, xmm0);
-				ret();
-
-				L(still_strong);
-				mov(ptr[rsp + 8], rbx);  // recover
-				mov(rax, ret_addr);
-				jmp(rax);
-			}
-		} xbyakCode{ is_strong, funcAddr + BRANCH_TYPE };
-		add_trampoline<BRANCH_TYPE, ID>(&xbyakCode);
-	}
-
-	void apply_get_CombatSpecialAttackChance(std::uintptr_t is_strong)
-	{
-		const int ID = 49749, BRANCH_TYPE = 5;
-		constexpr REL::ID funcOffset(ID);
-		auto funcAddr = funcOffset.address();
-		constexpr REL::ID subOffset(37586);
-		auto subAddr = subOffset.address();
-
-		struct Code : Xbyak::CodeGenerator
-		{
-			Code(uintptr_t is_strong_addr, uintptr_t ret_addr, uintptr_t sub_addr)
-			{
-				Xbyak::Label still_strong;
-
-				push(rcx);
-				push(rdx);
-				sub(rsp, 48);
-				mov(rax, is_strong_addr);
-				call(rax);
-				add(rsp, 48);
-				pop(rdx);
-				pop(rcx);
-
-				test(al, al);
-				jnz(still_strong);
-				xorps(xmm0, xmm0);
-				add(rsp, 0x28);  // recover
-				ret();
-
-				L(still_strong);
-				mov(rax, ret_addr);
-				push(rax);
-				mov(rax, sub_addr);
-				jmp(rax);
-			}
-		} xbyakCode{ is_strong, funcAddr + 0x4 + BRANCH_TYPE, subAddr };
-		add_trampoline<BRANCH_TYPE, ID, 0x4>(&xbyakCode);
-	}
-
 	void apply_get_CombatRangedAttackChance(std::uintptr_t is_strong)
 	{
-		const int ID = 49772, BRANCH_TYPE = 6;
+		const int ID = 49772, BRANCH_TYPE = 5;
 		constexpr REL::ID funcOffset = REL::ID(ID);
 		auto funcAddr = funcOffset.address();
 
@@ -150,41 +34,6 @@ namespace Hooks
 				L(still_strong);
 				push(rbx);       // recover
 				sub(rsp, 0x40);  // recover
-				mov(rax, ret_addr);
-				jmp(rax);
-			}
-		} xbyakCode{ is_strong, funcAddr + BRANCH_TYPE };
-		add_trampoline<BRANCH_TYPE, ID>(&xbyakCode);
-	}
-
-	void apply_get_CombatBashChance(std::uintptr_t is_strong)
-	{
-		const int ID = 49755, BRANCH_TYPE = 5;
-		constexpr REL::ID funcOffset = REL::ID(ID);
-		auto funcAddr = funcOffset.address();
-
-		struct Code : Xbyak::CodeGenerator
-		{
-			Code(uintptr_t is_strong_addr, uintptr_t ret_addr)
-			{
-				Xbyak::Label still_strong;
-
-				push(rcx);
-				push(rdx);
-				sub(rsp, 40);
-				mov(rax, is_strong_addr);
-				call(rax);
-				add(rsp, 40);
-				pop(rdx);
-				pop(rcx);
-
-				test(al, al);
-				jnz(still_strong);
-				xorps(xmm0, xmm0);
-				ret();
-
-				L(still_strong);
-				mov(ptr[rsp + 8], rbx);	 // recover
 				mov(rax, ret_addr);
 				jmp(rax);
 			}
@@ -219,43 +68,8 @@ namespace Hooks
 				ret();
 
 				L(still_strong);
-				push(rbx);  // recover
+				push(rbx);       // recover
 				sub(rsp, 0x30);  // recover
-				mov(rax, ret_addr);
-				jmp(rax);
-			}
-		} xbyakCode{ is_strong, funcAddr + BRANCH_TYPE };
-		add_trampoline<BRANCH_TYPE, ID>(&xbyakCode);
-	}
-
-	void apply_get_OffensiveBashChance(std::uintptr_t is_strong)
-	{
-		const int ID = 49756, BRANCH_TYPE = 5;
-		constexpr REL::ID funcOffset = REL::ID(ID);
-		auto funcAddr = funcOffset.address();
-
-		struct Code : Xbyak::CodeGenerator
-		{
-			Code(uintptr_t is_strong_addr, uintptr_t ret_addr)
-			{
-				Xbyak::Label still_strong;
-
-				push(rcx);
-				push(rdx);
-				sub(rsp, 40);
-				mov(rax, is_strong_addr);
-				call(rax);
-				add(rsp, 40);
-				pop(rdx);
-				pop(rcx);
-
-				test(al, al);
-				jnz(still_strong);
-				xorps(xmm0, xmm0);
-				ret();
-
-				L(still_strong);
-				mov(ptr[rsp + 8], rbx);	 // recover
 				mov(rax, ret_addr);
 				jmp(rax);
 			}
@@ -289,7 +103,7 @@ namespace Hooks
 				test(al, al);
 				jnz(still_strong);
 				xorps(xmm0, xmm0);
-				add(rsp, 0x28);	 // recover
+				add(rsp, 0x28);  // recover
 				ret();
 
 				L(still_strong);
@@ -302,10 +116,24 @@ namespace Hooks
 		add_trampoline<BRANCH_TYPE, ID, 0x4>(&xbyakCode);
 	}
 
+	float player_bow_hooked(char* _a, RE::TESObjectWEAP* weap, bool left, float drawn_time)
+	{
+		auto weapon_speed =
+			_generic_foo_<25851, float(char* _a, RE::TESObjectWEAP* weap, bool left)>::eval(_a, weap, left);
+		auto power = _generic_foo_<25868, float(float time, float speed)>::eval(drawn_time, weapon_speed);
+
+		if (!weap)
+			return power;
+
+		const float MIN_POWER = 0.35f;
+		auto a = reinterpret_cast<RE::Character*>(_a - 0xB0);
+		return Denying::Player::is_strong_Player_bow(a) ? power : MIN_POWER;
+	}
+
 	void apply_deny_bow_Player()
 	{
 		// SkyrimSE.exe+74B769(+0x5F9) -- SkyrimSE.exe+74B779(+0x609)
-		const int ID = 42928, BRANCH_TYPE = 6;
+		const int ID = 42928, BRANCH_TYPE = 5;
 		constexpr REL::ID funcOffset = REL::ID(ID);
 		auto retAddr = std::uintptr_t(funcOffset.address() + 0x609);
 
@@ -319,104 +147,13 @@ namespace Hooks
 				mov(rax, retaddr);
 				jmp(rax);
 			}
-		} xbyakCode{ std::uintptr_t(PlayerHandler::deny_bow_Player), retAddr };
+		} xbyakCode{ std::uintptr_t(player_bow_hooked), retAddr };
 		add_trampoline<BRANCH_TYPE, ID, 0x5F9>(&xbyakCode);
-	}
-
-	void apply_Actor__jump(std::uintptr_t f)
-	{
-		// SkyrimSE.exe+7091B4
-		const int ID = 41349, BRANCH_TYPE = 5;
-
-		struct Code : Xbyak::CodeGenerator
-		{
-			Code(uintptr_t jump_addr)
-			{
-				mov(rax, jump_addr);
-				jmp(rax);
-			}
-		} xbyakCode{ f };
-		add_trampoline<BRANCH_TYPE, ID, 0x114>(&xbyakCode);
-	}
-
-	void apply_PlayerControls__sub_140705530()
-	{
-		// SkyrimSE.exe+709787
-		const int ID = 41361, CALL_TYPE = 6;
-
-		struct Code : Xbyak::CodeGenerator
-		{
-			Code(uintptr_t jump_addr)
-			{
-				push(rax);
-				sub(rsp, 0x20);
-
-				mov(r9, rax);
-				mov(rax, jump_addr);
-				call(rax);
-
-				add(rsp, 0x20);
-				pop(rax);
-
-				mov(ecx, ptr[rax + 0xC4]);
-				ret();
-			}
-		} xbyakCode{ std::uintptr_t(PlayerHandler::PlayerControls__sub_140705530_hooked) };
-		add_trampoline<CALL_TYPE, ID, 0xD7, true>(&xbyakCode);
-
-		constexpr REL::ID funcOffset(ID);
-		const char data_end[] = "\x0F\x1F\x44\x00\x00";
-		REL::safe_write(funcOffset.address() + 0xCB, data_end, 4);  // ????? why not 5
-	}
-
-	void apply_deny_player_attack_or_bash()
-	{
-		const int ID = 38047;
-
-		// SkyrimSE.exe+63D06B
-		apply_call<ID, 0xBB>((uintptr_t)CharHandler::deny_player_attack_isstrong);
-
-		constexpr REL::ID funcOffset(ID);
-		const char data[] = "\x84\xc0\x75\x38\xeb\x1d";
-		REL::safe_write(funcOffset.address() + 0xC0, data, 6);
-	}
-
-	void aplly_cost_jump_Player()
-	{
-		// SkyrimSE.exe+5D2115(+0x195) -- SkyrimSE.exe+5D211C(+0x19C)
-		const int ID = 36271, BRANCH_TYPE = 6;
-		constexpr REL::ID funcOffset = REL::ID(ID);
-		auto retAddr = std::uintptr_t(funcOffset.address() + 0x19C);
-
-		struct Code : Xbyak::CodeGenerator
-		{
-			Code(uintptr_t func, uintptr_t retaddr)
-			{
-				sub(rsp, 0x20);
-				movss(ptr[rsp + 0x18], xmm0);
-				movss(ptr[rsp + 0x10], xmm6);
-
-				mov(rcx, rdi);
-				mov(rax, func);
-				call(rax);
-
-				movss(xmm0, ptr[rsp + 0x18]);
-				movss(xmm6, ptr[rsp + 0x10]);
-				add(rsp, 0x20);
-
-				movaps(xmm7, xmm0);  // restore
-				mulss(xmm7, xmm6);
-
-				mov(rax, retaddr);
-				jmp(rax);
-			}
-		} xbyakCode{ std::uintptr_t(PlayerHandler::cost_jump_Player), retAddr };
-		add_trampoline<BRANCH_TYPE, ID, 0x195>(&xbyakCode);
 	}
 
 	void apply_meleeBash_cost()
 	{
-		apply_call<37650, 0x16E>((uintptr_t)CharHandler::get_attack_cost);  // SkyrimSE.exe+627A9E
+		Costs::MeleeBash::OnAttackHook::Hook();
 
 		// SkyrimSE.exe+627A59
 		const int ID = 37650;
@@ -444,83 +181,173 @@ namespace Hooks
 				mov(rax, retaddr_nulldata);
 				jmp(rax);
 			}
-		} xbyakCode{ std::uintptr_t(CharHandler::damage_attack_cost_nulldata), retAddr, retaddr_nulldata };
+		} xbyakCode{ std::uintptr_t(Costs::MeleeBash::on_attack_nulldata), retAddr, retaddr_nulldata };
 		add_trampoline<6, ID, 0x129>(&xbyakCode);
 	}
 
 	void apply_hooks()
 	{
-		SKSE::AllocTrampoline(1 << 10);
+		[[maybe_unused]] auto& trampoline = SKSE::GetTrampoline();
 
-		if (*Settings::meleeNPC) {
-			// NPC, deny melee
-			apply_another_get_chance(std::uintptr_t(CharHandler::is_strong_attack));
-			apply_get_CombatSpecialAttackChance(std::uintptr_t(CharHandler::is_strong_attack));
-		}
-		if (*Settings::bashNPC) {
-			// NPC, deny bash
-			apply_get_CombatBashChance(std::uintptr_t(CharHandler::is_strong_bash));
-			apply_get_OffensiveBashChance(std::uintptr_t(CharHandler::is_strong_bash));
-		}
+		// NPC, deny melee & bash
+		GetThisAttackChanceHook::Hook();
 
-		if (*Settings::meleePlayer || *Settings::bashPlayer) {
-			// deny Player. Melee and (or) bash
-			apply_deny_player_attack_or_bash();
-		}
+		// NPC, deny bow
+		apply_get_CombatRangedAttackChance(std::uintptr_t(Denying::NPC::is_strong_NPC_bow));
 
-		if (*Settings::meleeCostNPC || *Settings::meleeCostPlayer || *Settings::bashCostNPC || *Settings::bashCostPlayer) {
-			// cost. NPC and (or) Player. Melee and (or) bash
-			apply_meleeBash_cost();
-		}
-		
-		if (*Settings::rangedNPC) {
-			// NPC, deny
-			apply_get_CombatRangedAttackChance(std::uintptr_t(CharHandler::is_strong_bow_NPC));
-		}
-		if (*Settings::rangedPlayer) {
-			// Player, deny
-			apply_deny_bow_Player();
-		}
-		if (*Settings::rangedCostNPC || *Settings::rangedCostPlayer) {
-			// cost, NPC and (or) Player
-			apply_call<41778, 0x133>(std::uintptr_t(CharHandler::TESObjectWEAP__Fire_140235240_hooked));  // SkyrimSE.exe+7221E3
-		}
+		// NPC, deny block
+		apply_get_CombatBlockChance(std::uintptr_t(Denying::NPC::is_strong_NPC_block));
+		apply_get_CombatBlockAttackChance(std::uintptr_t(Denying::NPC::is_strong_NPC_block));
 
-		if (*Settings::blockNPC) {
-			// NPC, deny
-			apply_get_CombatBlockChance(std::uintptr_t(CharHandler::is_strong_block));
-			apply_get_CombatBlockAttackChance(std::uintptr_t(CharHandler::is_strong_block));
-		}
-		if (*Settings::blockPlayer) {
-			// Player, deny
-			apply_PlayerControls__sub_140705530();
-		}
-		if (*Settings::blockCostNPC || *Settings::blockCostPlayer) {
-			// Both, cost
-			apply_call<37633, 0x8D4>(std::uintptr_t(CharHandler::get_block_cost));  // SkyrimSE.exe+626CD4
-		}
+		// NPC, get slower
+		ActorState__get_speed_kHook::Hook();
 
-		if (*Settings::runspeedNPC) {
-			// NPC, get slower
-			apply_call<49311, 0x2E1>(std::uintptr_t(SpeedHandler::hooked_ActorState__sub_1410C3D40));  // SkyrimSE.exe+83CB51
-		}
+		// Player, deny bow
+		apply_deny_bow_Player();
 
-		if (*Settings::jumpPlayer) {
-			// Player, deny
-			apply_Actor__jump(std::uintptr_t(PlayerHandler::deny_jump_Player));
-		}
-		if (*Settings::jumpCost) {
-			// Player, cost
-			aplly_cost_jump_Player();
-		}
+		// Player, deny block
+		PlayerBlockButtonHook::Hook();
 
-		if (*Settings::RegenPlayer || *Settings::RegenNPC) {
-			// Both, regen
-			apply_call<37510, 0x176>(std::uintptr_t(CharHandler::Custom_regen_140620806));  // SkyrimSE.exe+620806
+		// Player, deny jump
+		PlayerJumpHook::Hook();
+
+		// Player, deny melee & bash
+		PlayerDenyAttackBashHook::Hook();
+
+		// Player, scale damage
+		GetDamageHook::Hook();
+
+		// Cost bow
+		FireKeepBowHook::Hook();
+
+		// Cost block
+		OnBlockedHook::Hook();
+
+		// Cost jump
+		OnJumpHook::Hook();
+
+		// Cost melee && bash
+		apply_meleeBash_cost();
+
+		// Regen rate & delay
+		StaminaRegenHook::Hook();
+
+		// Swimming
+		SwimmingHook::Hook();
+	}
+
+	float GetDamageHook::get_damage(void* _weap, RE::ActorValueOwner* a, float DamageMult, char isbow)
+	{
+		auto ans = _get_damage(_weap, a, DamageMult, isbow);
+
+		if (isbow || !a->GetIsPlayerOwner())
+			return ans;
+
+		return Denying::Player::get_scaled_damage(RE::PlayerCharacter::GetSingleton(), ans);
+	}
+
+	float GetThisAttackChanceHook::get_thisattack_chance(RE::Actor* me, RE::Actor* he, RE::BGSAttackData* my_attackdata)
+	{
+		return Denying::NPC::is_strong_NPC_melee_bash(me, my_attackdata) ?
+		           _get_thisattack_chance(me, he, my_attackdata) :
+                   0.0f;
+	}
+
+	float ActorState__get_speed_kHook::ActorState__get_speed_k(RE::ActorState* a, float speed)
+	{
+		auto actor = reinterpret_cast<RE::Actor*>(reinterpret_cast<char*>(a) - 0xB8);
+		return _ActorState__get_speed_k(a, Denying::NPC::get_speed_NPC(actor, speed));
+	}
+
+	uint32_t PlayerBlockButtonHook::sub_140705530(RE::PlayerControls* controls, uint32_t a2, uint32_t er8_0)
+	{
+		return Denying::Player::is_strong_Player_block() ? _sub_140705530(controls, a2, er8_0) : 0;
+	}
+
+	void PlayerJumpHook::Jump(RE::Actor* a)
+	{
+		if (Denying::Player::is_strong_Player_jump(a))
+			return _Jump(a);
+	}
+
+	float PlayerDenyAttackBashHook::get_attack_cost(RE::ActorValueOwner* _a, RE::BGSAttackData* attack)
+	{
+		auto a = reinterpret_cast<RE::Actor*>(reinterpret_cast<char*>(_a) - 0xB0);
+		return Denying::Player::is_strong_Player_melee_bash(a, attack) ? 0.0f : 1.0f;
+	}
+
+	void FireKeepBowHook::Fire(RE::TESObjectWEAP* weap, RE::TESObjectREFR* source, RE::TESAmmo* overwriteAmmo,
+		RE::EnchantmentItem* ammoEnchantment, RE::AlchemyItem* poison)
+	{
+		_Fire(weap, source, overwriteAmmo, ammoEnchantment, poison);
+		auto a = source->As<RE::Character>();
+		if (!a || !weap || weap->weaponData.animationType != RE::WEAPON_TYPE::kBow)
+			return;
+
+		if (Settings::Costs::bowshot.is_enabled())
+			FenixUtils::damagestamina_delay_blink(a, Costs::Bow::get_bow_cost(a));
+	}
+
+	void FireKeepBowHook::RestoreActorValue(RE::Actor* a, RE::ActorValue av, float val)
+	{
+		if (a->actorState1.meleeAttackState != RE::ATTACK_STATE_ENUM::kBowDrawn ||
+			!Settings::Costs::bowshot.is_enabled()) {
+			_RestoreActorValue(a, av, val);
 		}
-		if (*Settings::rangedKeepDamage) {
-			// Both, keep cost
-			apply_call<37510, 0x1B>(std::uintptr_t(CharHandler::ranged_damage_while_keep));  // SkyrimSE.exe+6206AB
+	}
+
+	bool FireKeepBowHook::update_RegenDelay(RE::Actor* a, RE::ActorValue av, float passed_time)
+	{
+		if (a->actorState1.meleeAttackState == RE::ATTACK_STATE_ENUM::kBowDrawn &&
+			Settings::Costs::bowkeep.is_enabled()) {
+			FenixUtils::damageav(a, RE::ActorValue::kStamina, passed_time * Costs::Bow::get_bow_cost_keep(a));
 		}
+		return _update_RegenDelay(a, av, passed_time);
+	}
+
+	float GetBlockCostHook::get_block_cost(RE::HitData* hitdata)
+	{
+		return Costs::Block::get_block_cost(hitdata, _get_block_cost(hitdata));
+	}
+
+	float OnJumpHook::GetScale(RE::Actor* a)
+	{
+		if (Settings::Costs::jump.is_enabled())
+			Costs::Jump::on_jump(a);
+
+		return _GetScale(a);
+	}
+
+	float OnBlockedHook::get_block_cost(RE::HitData* hit)
+	{
+		return Costs::Block::get_block_cost(hit, _get_block_cost(hit));
+	}
+
+	void StaminaRegenHook::RestoreActorValue(RE::Actor* a, RE::ActorValue stamina, float val)
+	{
+		float mul = Regen::calculate_regen_mult(a);
+		if (mul > 0.0f)
+			_RestoreActorValue(a, stamina, val * mul);
+	}
+	void StaminaRegenHook::Custom_StaminaRegenDelay(RE::AIProcess* proc, RE::ActorValue ind, float origin,
+		float modifier_delta_neg)
+	{
+		_set_RegenDelay(proc, ind,
+			ind == RE::ActorValue::kStamina ? Regen::get_regen_delay(modifier_delta_neg, origin) : origin);
+	}
+
+	void SwimmingHook::RestoreActorValue(RE::Actor* a, RE::ActorValue av, float val)
+	{
+		if (!a->actorState1.swimming || !Settings::Costs::swimming.is_enabled()) {
+			_RestoreActorValue(a, av, val);
+		}
+	}
+
+	bool SwimmingHook::update_RegenDelay(RE::Actor* a, RE::ActorValue av, float passed_time)
+	{
+		if (a->actorState1.swimming && Settings::Costs::swimming.is_enabled()) {
+			FenixUtils::damageav(a, RE::ActorValue::kStamina, passed_time * Costs::Swimming::get_swimming_cost(a));
+		}
+		return _update_RegenDelay(a, av, passed_time);
 	}
 }

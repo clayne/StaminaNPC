@@ -1,5 +1,5 @@
 {
-  "name": "staminanpc",
+  "name": "fenixstaminaoverhaul",
   "version-string": "1.0.0",
   "description": "Here should be description",
   "homepage": "https://github.com/Ryan-rsm-McKenzie/ExamplePlugin-CommonLibSSE",
@@ -8,10 +8,12 @@
     "autotoml",
     "boost-atomic",
     "boost-stl-interfaces",
-    "xbyak",
+    "glm",
+    "simpleini",
+    "rsm-binary-io",
     "span-lite",
-    "tomlplusplus",
-    "spdlog"
+    "spdlog",
+    "xbyak"
   ],
   "builtin-baseline":"bba8794b82a0f44b8709f294850a2c8e96b61415",
   "overrides":[

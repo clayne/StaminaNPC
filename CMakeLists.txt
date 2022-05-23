@@ -1,8 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
-
-# ---- Options ----
-
-option(COPY_BUILD "Copy the build output to the Skyrim directory." OFF)
+cmake_minimum_required(VERSION 3.21)
 
 # ---- Cache build vars ----
 
@@ -12,12 +8,10 @@ macro(set_from_environment VARIABLE)
 	endif ()
 endmacro()
 
-set_from_environment(Skyrim64Path)
 set_from_environment(VCPKG_ROOT)
 
 if (DEFINED VCPKG_ROOT)
 	set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
-  set(VCPKG_OVERLAY_PORTS "${CMAKE_CURRENT_SOURCE_DIR}/ports" CACHE STRING "")
 	set(VCPKG_TARGET_TRIPLET "x64-windows-static" CACHE STRING "")
 else ()
 	message(
@@ -32,7 +26,7 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE STR
 # ---- Project ----
 
 project(
-	StaminaNPC
+	FenixStaminaOverhaul
 	VERSION 1.0.0
 	LANGUAGES CXX
 )
@@ -80,25 +74,21 @@ set(Boost_USE_STATIC_LIBS ON)
 
 # ---- Dependencies ----
 
-add_subdirectory($ENV{CommonLibSSE} $ENV{CommonLibSSE}/build)
+add_subdirectory($ENV{UselessFenixUtils} ./UselessFenixUtils/build)
 
 find_package(spdlog REQUIRED CONFIG)
 find_package(AutoTOML REQUIRED CONFIG)
 
 # ---- Add source files ----
 
-set(headers
+set(SOURCES
 	src/PCH.h
   src/CharacterHandler.h
   src/PlayerHandler.h
   src/Hooks.h
   src/Utils.h
   src/Settings.h
-)
-
-set(sources
 	src/main.cpp
-	src/PCH.cpp
   src/Hooks.cpp
   src/Utils.cpp
   src/CharacterHandler.cpp
@@ -109,8 +99,7 @@ source_group(
 	TREE
 		${CMAKE_CURRENT_SOURCE_DIR}
 	FILES
-		${headers}
-		${sources}
+		${SOURCES}
 )
 
 source_group(
@@ -125,13 +114,11 @@ source_group(
 add_library(
 	${PROJECT_NAME}
 	SHARED
-	${headers}
-	${sources}
+	${SOURCES}
 	${CMAKE_CURRENT_BINARY_DIR}/include/Version.h
 	${CMAKE_CURRENT_BINARY_DIR}/version.rc
 	.clang-format
 	.editorconfig
-  StaminaNPC.toml
 )
 
 target_compile_features(
@@ -150,8 +137,8 @@ target_include_directories(
 target_link_libraries(
 	${PROJECT_NAME}
 	PRIVATE
-    AutoTOML::AutoTOML
 		CommonLibSSE::CommonLibSSE
+		UselessFenixUtils::UselessFenixUtils
 		spdlog::spdlog
 )
 
@@ -159,6 +146,8 @@ if (MSVC)
 	target_compile_options(
 		${PROJECT_NAME}
 		PRIVATE
+      /std:c17
+      
 			/sdl	# Enable Additional Security Checks
 			/utf-8	# Set Source and Executable character sets to UTF-8
 			/Zi	# Debug Information Format
@@ -212,21 +201,3 @@ target_precompile_headers(
 	PRIVATE
 		src/PCH.h
 )
-
-# ---- Post build ----
-
-if (COPY_BUILD)
-	if (DEFINED Skyrim64Path)
-		add_custom_command(
-			TARGET ${PROJECT_NAME}
-			POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> ${Skyrim64Path}/Data/SKSE/Plugins/
-			COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_PDB_FILE:${PROJECT_NAME}> ${Skyrim64Path}/Data/SKSE/Plugins/
-		)
-	else ()
-		message(
-			WARNING
-			"Variable Skyrim64Path is not defined. Skipping post-build copy command."
-		)
-	endif ()
-endif ()

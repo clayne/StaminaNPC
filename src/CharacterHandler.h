@@ -1,32 +1,96 @@
 #pragma once
 
-
-namespace CharHandler
+namespace Costs
 {
-	bool is_strong_attack(RE::Actor* actor);
-	bool is_strong_bash(RE::Actor* actor);
-	float get_attack_cost(char* _a, RE::BGSAttackData* attack = nullptr);
-	float get_block_cost(RE::HitData* data);
-	void TESObjectWEAP__Fire_140235240_hooked(RE::TESObjectWEAP* weap, RE::TESObjectREFR* source, RE::TESAmmo* overwriteAmmo, RE::EnchantmentItem* ammoEnchantment, RE::AlchemyItem* poison);
-	bool is_strong_block(RE::Actor* a);
+	namespace Equipement
+	{
+		float get_curiass_weight(RE::Actor* a);
+		float get_blocking_thing_weight(RE::Actor* a);
+		float get_bow_weight(RE::Actor* a);
+		float get_attacking_thing_weight(RE::Actor* a, bool left, bool bash);
+	}
 
-	bool deny_player_attack_isstrong(char* _a, RE::BGSAttackData* attack);
-	bool is_strong_bow(RE::Actor* a, RE::TESObjectWEAP* bow);
-	bool is_strong_bow_NPC(RE::Actor* a, RE::TESObjectWEAP* bow);
-	void Custom_regen_140620806(RE::Actor* a, int, float val);
-	bool ranged_damage_while_keep(RE::Actor* a, int ind, float passed_time);
-	void damage_attack_cost_nulldata(RE::Actor* a);
+	namespace Level
+	{
+		float get_level_k(RE::Actor* a);
+	}
+
+	namespace Skill
+	{
+		float get_skill_k(RE::Actor* a, RE::ActorValue av);
+	}
+
+	namespace MeleeBash
+	{
+		class OnAttackHook
+		{
+		public:
+			static void Hook();
+			static float get_attack_cost(RE::ActorValueOwner* _a, RE::BGSAttackData* attack);
+			static inline REL::Relocation<decltype(get_attack_cost)> _get_attack_cost;
+		};
+
+		float get_attack_cost(RE::Actor* a, RE::BGSAttackData* adata);
+		void on_attack_nulldata(RE::Actor* a);
+		float get_cost_meleeBash_base_(RE::Actor* a, bool bash, bool power, bool left);
+		RE::ActorValue get_action_skill_(RE::Actor* a, bool left, bool bash);
+	}
+
+	namespace Block
+	{
+		float get_block_cost(RE::HitData* data, float origin);
+		float get_block_cost_base(RE::Actor* target, float aggressor_weight);
+	}
+
+	namespace Jump
+	{
+		float get_jump_cost(RE::Actor* a);
+		float get_jump_cost_base(RE::Actor* a);
+		void on_jump(RE::Actor* a);
+	}
+
+	namespace Bow
+	{
+		float get_bow_cost_base(RE::Actor* a);
+		float get_bow_cost(RE::Actor* a);
+		float get_bow_cost_keep_base(RE::Actor* a);
+		float get_bow_cost_keep(RE::Actor* a);
+	}
+
+	namespace Swimming
+	{
+		float get_swimming_cost_base(RE::Actor* a);
+		float get_swimming_cost(RE::Actor* a);
+	}
 }
 
-namespace PlayerHandler
+namespace Denying
 {
-	void PlayerControls__sub_140705530_hooked(RE::PlayerControls* controls, int32_t a2, int32_t a3, RE::PlayerCharacter* player);
-	float deny_bow_Player(char* _a, RE::TESObjectWEAP* weap, bool left, float drawn_time);
-	void deny_jump_Player(RE::Actor* player);
-	void cost_jump_Player(RE::Actor* player);
+	namespace NPC
+	{
+		bool is_strong_NPC_melee_bash(RE::Actor* a, RE::BGSAttackData* adata);
+		bool is_strong_NPC_bow(RE::Actor* a);
+		bool is_strong_NPC_block(RE::Actor* a);
+		float get_speed_NPC(RE::Actor* a, float origin);
+	}
+
+	namespace Player
+	{
+		bool is_strong_Player_bow(RE::Actor* a);
+		bool is_strong_Player_block();
+		bool is_strong_Player_jump(RE::Actor* a);
+		bool is_strong_Player_melee_bash(RE::Actor* a, RE::BGSAttackData* adata);
+		float get_scaled_damage(RE::Actor* a, float origin);
+	}
 }
 
-namespace SpeedHandler
+namespace Regen
 {
-	float hooked_ActorState__sub_1410C3D40(char* a1, float speed);
+	float calculate_regen_mult(RE::Actor* a);
+	float get_w(RE::Actor* a);
+	float get_cwp(RE::Actor* a);
+	float get_carry_k(RE::Actor* a);
+	float get_HP_k(RE::Actor* a);
+	float get_SP_k(RE::Actor* a);
+	float get_regen_delay(float modifier_delta_neg, float origin);
 }
