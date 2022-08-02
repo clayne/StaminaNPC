@@ -468,7 +468,7 @@ namespace Regen
 
 	float get_SP_k(RE::Actor* a)
 	{
-		return Settings::Regen::HP_SP::get_HP(FenixUtils::getAV_pers(a, RE::ActorValue::kStamina));
+		return Settings::Regen::HP_SP::get_SP(FenixUtils::getAV_pers(a, RE::ActorValue::kStamina));
 	}
 
 	float calculate_regen_mult(RE::Actor* a) {

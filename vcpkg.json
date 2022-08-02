@@ -5,7 +5,6 @@
   "homepage": "https://github.com/Ryan-rsm-McKenzie/ExamplePlugin-CommonLibSSE",
   "license": "MIT",
   "dependencies": [
-    "autotoml",
     "boost-atomic",
     "boost-stl-interfaces",
     "glm",

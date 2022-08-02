@@ -77,7 +77,6 @@ set(Boost_USE_STATIC_LIBS ON)
 add_subdirectory($ENV{UselessFenixUtils} ./UselessFenixUtils/build)
 
 find_package(spdlog REQUIRED CONFIG)
-find_package(AutoTOML REQUIRED CONFIG)
 
 # ---- Add source files ----
 
